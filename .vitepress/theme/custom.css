@@ -20,3 +20,8 @@
 .VPHero .tagline {
   max-width: 42rem;
 }
+
+.dynamic-site-title {
+  display: inline-flex;
+  align-items: center;
+}

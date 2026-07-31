@@ -35,6 +35,7 @@ export default defineConfig({
   ],
   themeConfig: {
     logo: undefined,
+    siteTitle: false,
     nav: [
       { text: '首页', link: '/' },
       ...nav,
