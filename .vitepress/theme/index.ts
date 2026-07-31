@@ -1,6 +1,5 @@
 import DefaultTheme from 'vitepress/theme'
-import { h, nextTick, watch } from 'vue'
-import { inBrowser, useData, useRoute } from 'vitepress'
+import { inBrowser, onContentUpdated } from 'vitepress'
 import Layout from './Layout.vue'
 import './custom.css'
 
@@ -13,7 +12,11 @@ function getMermaidModule() {
   return mermaidModulePromise
 }
 
-async function renderMermaidDiagrams(isDark: boolean) {
+function isDarkMode() {
+  return document.documentElement.classList.contains('dark')
+}
+
+async function renderMermaidDiagrams() {
   if (!inBrowser) {
     return
   }
@@ -21,7 +24,7 @@ async function renderMermaidDiagrams(isDark: boolean) {
   const { default: mermaid } = await getMermaidModule()
   mermaid.initialize({
     startOnLoad: false,
-    theme: isDark ? 'dark' : 'default',
+    theme: isDarkMode() ? 'dark' : 'default',
     securityLevel: 'loose'
   })
 
@@ -49,45 +52,57 @@ function prepareMermaidBlocks() {
     return
   }
 
-  const codeBlocks = Array.from(
-    document.querySelectorAll<HTMLElement>('.vp-doc pre code.language-mermaid')
+  const blocks = Array.from(
+    document.querySelectorAll<HTMLElement>('.vp-doc div.language-mermaid')
   )
 
-  for (const codeBlock of codeBlocks) {
-    const pre = codeBlock.parentElement
-    if (!pre || pre.parentElement?.classList.contains('mermaid-diagram')) {
+  for (const block of blocks) {
+    if (block.classList.contains('mermaid-diagram')) {
+      continue
+    }
+
+    const codeBlock = block.querySelector<HTMLElement>('pre code')
+    if (!codeBlock) {
       continue
     }
 
     const wrapper = document.createElement('div')
     wrapper.className = 'mermaid-diagram'
     wrapper.dataset.source = codeBlock.textContent ?? ''
-    pre.replaceWith(wrapper)
+    block.replaceWith(wrapper)
   }
 }
 
 export default {
   extends: DefaultTheme,
-  Layout() {
-    const route = useRoute()
-    const { isDark } = useData()
-
+  Layout,
+  enhanceApp({ router }) {
     const run = async () => {
-      await nextTick()
       prepareMermaidBlocks()
-      await renderMermaidDiagrams(isDark.value)
+      await renderMermaidDiagrams()
     }
 
-    if (inBrowser) {
-      watch(
-        [() => route.path, () => isDark.value],
-        () => {
-          void run()
-        },
-        { immediate: true }
-      )
+    if (!inBrowser) {
+      return
     }
 
-    return h(Layout)
+    onContentUpdated(() => {
+      void run()
+    })
+
+    router.onAfterRouteChange = async () => {
+      void run()
+    }
+
+    const observer = new MutationObserver(() => {
+      void run()
+    })
+
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    })
+
+    void run()
   }
 }
