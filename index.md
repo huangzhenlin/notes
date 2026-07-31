@@ -8,7 +8,7 @@ hero:
   actions:
     - theme: brand
       text: 开始阅读
-      link: /README
+      link: /01/
     - theme: alt
       text: GitHub 仓库
       link: https://github.com/huangzhenlin/notes

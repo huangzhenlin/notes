@@ -11,6 +11,8 @@ node_modules/
 .vitepress/cache/
 .vitepress/dist/
 .vitepress/sidebar.json
+.vitepress/nav.json
+site/
 
 # Temporary files
 *.tmp

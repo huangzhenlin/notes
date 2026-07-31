@@ -2,13 +2,17 @@ import { defineConfig } from 'vitepress'
 import fs from 'node:fs'
 import path from 'node:path'
 
+const navPath = path.resolve(process.cwd(), '.vitepress/nav.json')
 const sidebarPath = path.resolve(process.cwd(), '.vitepress/sidebar.json')
+const nav = fs.existsSync(navPath)
+  ? JSON.parse(fs.readFileSync(navPath, 'utf-8'))
+  : []
 const sidebar = fs.existsSync(sidebarPath)
   ? JSON.parse(fs.readFileSync(sidebarPath, 'utf-8'))
   : []
 
 export default defineConfig({
-  srcDir: '.',
+  srcDir: 'site',
   lang: 'zh-CN',
   title: '技术知识库',
   description: 'huangzhenlin/notes 技术知识库',
@@ -16,20 +20,11 @@ export default defineConfig({
   cleanUrls: true,
   lastUpdated: true,
   ignoreDeadLinks: true,
-  rewrites: {
-    'knowledge/:path*': ':path*'
-  },
-  srcExclude: [
-    'knowledge/**/AGENTS.md',
-    'knowledge/**/.agents/**',
-    'knowledge/**/.codex/**',
-    'knowledge/**/.obsidian/**'
-  ],
   themeConfig: {
     logo: undefined,
     nav: [
       { text: '首页', link: '/' },
-      { text: '知识库导航', link: '/README' },
+      ...nav,
       { text: 'GitHub', link: 'https://github.com/huangzhenlin/notes' }
     ],
     sidebar,
