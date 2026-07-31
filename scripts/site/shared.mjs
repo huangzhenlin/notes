@@ -7,7 +7,6 @@ export const publicSourceRoot = path.join(projectRoot, 'public')
 export const publicContentRoot = path.join(contentRoot, 'public')
 export const navOutputPath = path.join(projectRoot, '.vitepress/nav.json')
 export const sidebarOutputPath = path.join(projectRoot, '.vitepress/sidebar.json')
-export const titlesOutputPath = path.join(projectRoot, '.vitepress/titles.json')
 
 export const ignoredDirectories = new Set([
   '.git',
