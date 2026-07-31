@@ -3,9 +3,9 @@ import path from 'node:path'
 
 const projectRoot = process.cwd()
 const knowledgeRoot = path.join(projectRoot, 'knowledge')
-const siteRoot = path.join(projectRoot, 'site')
 const navOutputPath = path.join(projectRoot, '.vitepress/nav.json')
 const sidebarOutputPath = path.join(projectRoot, '.vitepress/sidebar.json')
+const rewritesOutputPath = path.join(projectRoot, '.vitepress/rewrites.json')
 const ignoredDirectories = new Set([
   '.git',
   '.obsidian',
@@ -20,12 +20,6 @@ function sortEntries(entries) {
   return entries.sort((a, b) =>
     a.name.localeCompare(b.name, 'zh-CN', { numeric: true })
   )
-}
-
-function removeDirectory(directory) {
-  if (fs.existsSync(directory)) {
-    fs.rmSync(directory, { recursive: true, force: true })
-  }
 }
 
 function pageTitle(fileName) {
@@ -76,11 +70,6 @@ function routePathForFile(filePath) {
   return `/${topCode}/${parentCode}/${fileCode}`
 }
 
-function siteFilePathFromRoute(routePath) {
-  const relativeRoute = routePath.replace(/^\//, '')
-  return path.join(siteRoot, relativeRoute, 'index.md')
-}
-
 function collectMarkdownFiles(directory) {
   const entries = sortEntries(
     fs.readdirSync(directory, { withFileTypes: true })
@@ -110,29 +99,6 @@ function collectMarkdownFiles(directory) {
   }
 }
 
-function rewriteMarkdownLinks(markdown, sourceFilePath) {
-  return markdown.replace(/\]\(([^)#]+?\.md)(#[^)]+)?\)/g, (fullMatch, targetPath, hash = '') => {
-    if (/^(?:[a-z]+:)?\/\//i.test(targetPath)) {
-      return fullMatch
-    }
-
-    const resolvedPath = path.resolve(path.dirname(sourceFilePath), targetPath)
-    const routePath = routeMap.get(resolvedPath)
-
-    if (!routePath) {
-      return fullMatch
-    }
-
-    return `](${routePath}${hash})`
-  })
-}
-
-function writeSiteFile(routePath, content) {
-  const targetPath = siteFilePathFromRoute(routePath)
-  fs.mkdirSync(path.dirname(targetPath), { recursive: true })
-  fs.writeFileSync(targetPath, content, 'utf-8')
-}
-
 function firstDocumentRoute(directory) {
   const entries = sortEntries(
     fs.readdirSync(directory, { withFileTypes: true })
@@ -158,89 +124,6 @@ function firstDocumentRoute(directory) {
   }
 
   return null
-}
-
-function landingPageContent(title, sections) {
-  const lines = [`# ${title}`, '', '## 目录', '']
-
-  for (const section of sections) {
-    lines.push(`### ${section.title}`)
-    for (const child of section.items) {
-      lines.push(`- [${child.title}](${child.link})`)
-    }
-    lines.push('')
-  }
-
-  return `${lines.join('\n').trim()}\n`
-}
-
-function topLevelEntries() {
-  return sortEntries(
-    fs.readdirSync(knowledgeRoot, { withFileTypes: true })
-      .filter((entry) =>
-        entry.isDirectory() &&
-        /^0[1-9]-/.test(entry.name) &&
-        !ignoredDirectories.has(entry.name)
-      )
-  )
-}
-
-function sectionChildren(directory) {
-  const entries = sortEntries(
-    fs.readdirSync(directory, { withFileTypes: true })
-      .filter((entry) => !ignoredDirectories.has(entry.name))
-  )
-
-  return entries
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => {
-      const link = firstDocumentRoute(path.join(directory, entry.name))
-      return {
-        title: stripNumericPrefix(entry.name),
-        link
-      }
-    })
-    .filter((entry) => entry.link)
-}
-
-function buildTopLandingPages(entries) {
-  for (const entry of entries) {
-    const topCode = topLevelCode(entry.name)
-    const topPath = path.join(knowledgeRoot, entry.name)
-    const secondLevelEntries = sortEntries(
-      fs.readdirSync(topPath, { withFileTypes: true })
-        .filter((child) => child.isDirectory() && !ignoredDirectories.has(child.name))
-    )
-
-    const sections = secondLevelEntries
-      .map((child) => ({
-        title: stripNumericPrefix(child.name),
-        items: sectionChildren(path.join(topPath, child.name))
-      }))
-      .filter((section) => section.items.length > 0)
-
-    writeSiteFile(`/${topCode}`, landingPageContent(stripTopLevelPrefix(entry.name), sections))
-  }
-}
-
-function generateSiteContent(entries) {
-  removeDirectory(siteRoot)
-  fs.mkdirSync(siteRoot, { recursive: true })
-
-  const homeSourcePath = path.join(projectRoot, 'index.md')
-  const firstTopEntry = entries[0]
-  const firstTopRoute = firstTopEntry ? `/${topLevelCode(firstTopEntry.name)}/` : '/'
-  const homeContent = fs.readFileSync(homeSourcePath, 'utf-8')
-    .replace(/link:\s*\/[^\n]+/, `link: ${firstTopRoute}`)
-  fs.writeFileSync(path.join(siteRoot, 'index.md'), homeContent, 'utf-8')
-
-  buildTopLandingPages(entries)
-
-  for (const [sourcePath, routePath] of routeMap.entries()) {
-    const rawContent = fs.readFileSync(sourcePath, 'utf-8')
-    const rewrittenContent = rewriteMarkdownLinks(rawContent, sourcePath)
-    writeSiteFile(routePath, rewrittenContent)
-  }
 }
 
 function pageLink(filePath) {
@@ -287,14 +170,24 @@ function buildItems(directory) {
   return items
 }
 
+function topLevelEntries() {
+  return sortEntries(
+    fs.readdirSync(knowledgeRoot, { withFileTypes: true })
+      .filter((entry) =>
+        entry.isDirectory() &&
+        /^0[1-9]-/.test(entry.name) &&
+        !ignoredDirectories.has(entry.name)
+      )
+  )
+}
+
 const topDirectories = topLevelEntries()
 
 collectMarkdownFiles(knowledgeRoot)
-generateSiteContent(topDirectories)
 
 const nav = topDirectories.map((entry) => ({
   text: stripTopLevelPrefix(entry.name),
-  link: `/${topLevelCode(entry.name)}/`
+  link: firstDocumentRoute(path.join(knowledgeRoot, entry.name)) ?? '/'
 }))
 
 const sidebar = Object.fromEntries(
@@ -311,7 +204,20 @@ const sidebar = Object.fromEntries(
   ])
 )
 
+const rewrites = Object.fromEntries(
+  [...routeMap.entries()].map(([sourcePath, routePath]) => {
+    const relativePath = path.relative(knowledgeRoot, sourcePath)
+      .replace(/\\/g, '/')
+      .replace(/\.md$/i, '')
+
+    return [relativePath, routePath.replace(/^\//, '')]
+  })
+)
+
 fs.mkdirSync(path.dirname(navOutputPath), { recursive: true })
 fs.writeFileSync(navOutputPath, `${JSON.stringify(nav, null, 2)}\n`, 'utf-8')
 fs.writeFileSync(sidebarOutputPath, `${JSON.stringify(sidebar, null, 2)}\n`, 'utf-8')
-console.log(`Generated ${path.relative(projectRoot, navOutputPath)} and ${path.relative(projectRoot, sidebarOutputPath)}`)
+fs.writeFileSync(rewritesOutputPath, `${JSON.stringify(rewrites, null, 2)}\n`, 'utf-8')
+console.log(
+  `Generated ${path.relative(projectRoot, navOutputPath)}, ${path.relative(projectRoot, sidebarOutputPath)} and ${path.relative(projectRoot, rewritesOutputPath)}`
+)

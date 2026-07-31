@@ -12,7 +12,7 @@ node_modules/
 .vitepress/dist/
 .vitepress/sidebar.json
 .vitepress/nav.json
-site/
+.vitepress/rewrites.json
 
 # Temporary files
 *.tmp
