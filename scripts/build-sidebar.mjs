@@ -5,7 +5,6 @@ const projectRoot = process.cwd()
 const knowledgeRoot = path.join(projectRoot, 'knowledge')
 const navOutputPath = path.join(projectRoot, '.vitepress/nav.json')
 const sidebarOutputPath = path.join(projectRoot, '.vitepress/sidebar.json')
-const rewritesOutputPath = path.join(projectRoot, '.vitepress/rewrites.json')
 const ignoredDirectories = new Set([
   '.git',
   '.obsidian',
@@ -14,7 +13,6 @@ const ignoredDirectories = new Set([
   '.vitepress',
   'node_modules'
 ])
-const routeMap = new Map()
 
 function sortEntries(entries) {
   return entries.sort((a, b) =>
@@ -34,115 +32,64 @@ function stripNumericPrefix(value) {
   return value.replace(/^\d+(?:\.\d+)*\.?\s*/, '')
 }
 
-function extractNumericPrefix(value) {
-  const match = value.match(/^(\d+(?:\.\d+)*)/)
-  return match ? match[1] : null
+function isMarkdownFile(entry) {
+  return entry.isFile() && entry.name.toLowerCase().endsWith('.md')
 }
 
-function topLevelCode(directoryName) {
-  const match = directoryName.match(/^(\d+)/)
-  if (!match) {
-    throw new Error(`无法从顶级目录提取编号: ${directoryName}`)
-  }
-  return match[1]
+function isDocFile(entry) {
+  return isMarkdownFile(entry) && entry.name !== 'README.md' && entry.name !== 'AGENTS.md'
 }
 
-function routePathForFile(filePath) {
+function topLevelEntries() {
+  return sortEntries(
+    fs.readdirSync(knowledgeRoot, { withFileTypes: true }).filter((entry) =>
+      entry.isDirectory() &&
+      /^0[1-9]-/.test(entry.name) &&
+      !ignoredDirectories.has(entry.name)
+    )
+  )
+}
+
+function toRoutePath(filePath) {
   const relativePath = path.relative(knowledgeRoot, filePath)
-  const segments = relativePath.split(path.sep)
-
-  if (segments.length === 1 && segments[0] === 'README.md') {
-    return null
-  }
-
-  if (segments.length < 2) {
-    throw new Error(`无法为文件生成路由: ${relativePath}`)
-  }
-
-  const topCode = topLevelCode(segments[0])
-  const parentCode = extractNumericPrefix(segments[segments.length - 2])
-  const fileCode = extractNumericPrefix(pageTitle(segments[segments.length - 1]))
-
-  if (!parentCode || !fileCode) {
-    throw new Error(`无法从路径提取编号: ${relativePath}`)
-  }
-
-  return `/${topCode}/${parentCode}/${fileCode}`
+  const normalizedPath = relativePath.split(path.sep).join('/')
+  return `/${normalizedPath.replace(/\.md$/i, '')}`
 }
 
-function collectMarkdownFiles(directory) {
+function firstDocumentLink(directory) {
   const entries = sortEntries(
-    fs.readdirSync(directory, { withFileTypes: true })
-      .filter((entry) => !ignoredDirectories.has(entry.name))
+    fs.readdirSync(directory, { withFileTypes: true }).filter(
+      (entry) => !ignoredDirectories.has(entry.name)
+    )
   )
 
   for (const entry of entries) {
     const entryPath = path.join(directory, entry.name)
 
     if (entry.isDirectory()) {
-      collectMarkdownFiles(entryPath)
-      continue
-    }
-
-    if (!entry.isFile() || !entry.name.toLowerCase().endsWith('.md')) {
-      continue
-    }
-
-    if (entry.name === 'AGENTS.md') {
-      continue
-    }
-
-    const routePath = routePathForFile(entryPath)
-    if (routePath) {
-      routeMap.set(path.resolve(entryPath), routePath)
-    }
-  }
-}
-
-function firstDocumentRoute(directory) {
-  const entries = sortEntries(
-    fs.readdirSync(directory, { withFileTypes: true })
-      .filter((entry) => !ignoredDirectories.has(entry.name))
-  )
-
-  for (const entry of entries) {
-    const entryPath = path.join(directory, entry.name)
-
-    if (entry.isDirectory()) {
-      const nestedRoute = firstDocumentRoute(entryPath)
-      if (nestedRoute) {
-        return nestedRoute
+      const nestedLink = firstDocumentLink(entryPath)
+      if (nestedLink) {
+        return nestedLink
       }
       continue
     }
 
-    if (!entry.isFile() || !entry.name.toLowerCase().endsWith('.md') || entry.name === 'AGENTS.md') {
-      continue
+    if (isDocFile(entry)) {
+      return toRoutePath(entryPath)
     }
-
-    return routeMap.get(path.resolve(entryPath)) ?? null
   }
 
   return null
 }
 
-function pageLink(filePath) {
-  const routePath = routeMap.get(path.resolve(filePath))
-  if (!routePath) {
-    throw new Error(`未找到文档对应的路由: ${filePath}`)
-  }
-  return routePath
-}
-
 function buildItems(directory) {
   const entries = sortEntries(
-    fs.readdirSync(directory, { withFileTypes: true })
-      .filter((entry) => !ignoredDirectories.has(entry.name))
+    fs.readdirSync(directory, { withFileTypes: true }).filter(
+      (entry) => !ignoredDirectories.has(entry.name)
+    )
   )
 
-  const files = entries.filter(
-    (entry) => entry.isFile() && entry.name.toLowerCase().endsWith('.md')
-  )
+  const files = entries.filter(isDocFile)
   const directories = entries.filter((entry) => entry.isDirectory())
   const items = []
 
@@ -150,7 +97,7 @@ function buildItems(directory) {
     const filePath = path.join(directory, file.name)
     items.push({
       text: stripNumericPrefix(pageTitle(file.name)),
-      link: pageLink(filePath)
+      link: toRoutePath(filePath)
     })
   }
 
@@ -170,32 +117,20 @@ function buildItems(directory) {
   return items
 }
 
-function topLevelEntries() {
-  return sortEntries(
-    fs.readdirSync(knowledgeRoot, { withFileTypes: true })
-      .filter((entry) =>
-        entry.isDirectory() &&
-        /^0[1-9]-/.test(entry.name) &&
-        !ignoredDirectories.has(entry.name)
-      )
-  )
-}
-
 const topDirectories = topLevelEntries()
-
-collectMarkdownFiles(knowledgeRoot)
 
 const nav = topDirectories.map((entry) => ({
   text: stripTopLevelPrefix(entry.name),
-  link: firstDocumentRoute(path.join(knowledgeRoot, entry.name)) ?? '/'
+  link: firstDocumentLink(path.join(knowledgeRoot, entry.name)) ?? '/'
 }))
 
 const sidebar = Object.fromEntries(
   topDirectories.map((entry) => [
-    `/${topLevelCode(entry.name)}/`,
+    `/${entry.name}/`,
     sortEntries(
-      fs.readdirSync(path.join(knowledgeRoot, entry.name), { withFileTypes: true })
-        .filter((child) => child.isDirectory() && !ignoredDirectories.has(child.name))
+      fs.readdirSync(path.join(knowledgeRoot, entry.name), { withFileTypes: true }).filter(
+        (child) => child.isDirectory() && !ignoredDirectories.has(child.name)
+      )
     ).map((child) => ({
       text: stripNumericPrefix(child.name),
       collapsed: false,
@@ -204,20 +139,9 @@ const sidebar = Object.fromEntries(
   ])
 )
 
-const rewrites = Object.fromEntries(
-  [...routeMap.entries()].map(([sourcePath, routePath]) => {
-    const relativePath = path.relative(knowledgeRoot, sourcePath)
-      .replace(/\\/g, '/')
-      .replace(/\.md$/i, '')
-
-    return [relativePath, routePath.replace(/^\//, '')]
-  })
-)
-
 fs.mkdirSync(path.dirname(navOutputPath), { recursive: true })
 fs.writeFileSync(navOutputPath, `${JSON.stringify(nav, null, 2)}\n`, 'utf-8')
 fs.writeFileSync(sidebarOutputPath, `${JSON.stringify(sidebar, null, 2)}\n`, 'utf-8')
-fs.writeFileSync(rewritesOutputPath, `${JSON.stringify(rewrites, null, 2)}\n`, 'utf-8')
 console.log(
-  `Generated ${path.relative(projectRoot, navOutputPath)}, ${path.relative(projectRoot, sidebarOutputPath)} and ${path.relative(projectRoot, rewritesOutputPath)}`
+  `Generated ${path.relative(projectRoot, navOutputPath)} and ${path.relative(projectRoot, sidebarOutputPath)}`
 )

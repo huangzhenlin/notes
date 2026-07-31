@@ -9,7 +9,7 @@ const Layout = DefaultTheme.Layout
 
 const sectionTitleMap = new Map(
   nav.map((item) => {
-    const match = item.link.match(/^\/(\d+)\//)
+    const match = item.link.match(/^\/(\d+)-/)
     return [match?.[1] ?? '', item.text]
   })
 )
@@ -21,7 +21,7 @@ const currentSectionTitle = computed(() => {
     return '技术知识库'
   }
 
-  const match = path.match(/^\/(\d+)\//)
+  const match = path.match(/^\/(\d+)-/)
   if (!match) {
     return '技术知识库'
   }
