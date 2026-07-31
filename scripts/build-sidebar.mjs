@@ -17,6 +17,7 @@ const ignoredDirectories = new Set([
   'node_modules'
 ])
 const routeMap = new Map()
+const titleRouteMap = new Map()
 
 function sortEntries(entries) {
   return entries.sort((a, b) =>
@@ -125,9 +126,57 @@ function collectMarkdownFiles(directory) {
 
     const routePath = routePathForFile(entryPath)
     if (routePath) {
-      routeMap.set(path.resolve(entryPath), routePath)
+      const resolvedPath = path.resolve(entryPath)
+      routeMap.set(resolvedPath, routePath)
+
+      const title = pageTitle(entry.name)
+      if (!titleRouteMap.has(title)) {
+        titleRouteMap.set(title, routePath)
+      }
     }
   }
+}
+
+function resolveDocumentRoute(target, sourceFilePath) {
+  const normalizedTarget = target.trim().replace(/\\/g, '/')
+  const targetWithExtension = normalizedTarget.toLowerCase().endsWith('.md')
+    ? normalizedTarget
+    : `${normalizedTarget}.md`
+  const candidates = []
+
+  if (normalizedTarget.startsWith('/')) {
+    candidates.push(path.resolve(knowledgeRoot, targetWithExtension.slice(1)))
+  } else {
+    candidates.push(
+      path.resolve(path.dirname(sourceFilePath), targetWithExtension)
+    )
+    candidates.push(path.resolve(knowledgeRoot, targetWithExtension))
+  }
+
+  for (const candidate of candidates) {
+    const routePath = routeMap.get(candidate)
+    if (routePath) {
+      return routePath
+    }
+  }
+
+  return titleRouteMap.get(normalizedTarget) ?? null
+}
+
+function rewriteWikiLinks(markdown, sourceFilePath) {
+  return markdown.replace(
+    /\[\[([^|\]#]+)(?:#([^|\]]+))?(?:\|([^\]]+))?\]\]/g,
+    (fullMatch, target, heading = '', alias = '') => {
+      const routePath = resolveDocumentRoute(target, sourceFilePath)
+      if (!routePath) {
+        return fullMatch
+      }
+
+      const label = alias.trim() || target.trim()
+      const hash = heading.trim() ? `#${heading.trim()}` : ''
+      return `[${label}](${routePath}${hash})`
+    }
+  )
 }
 
 function rewriteMarkdownLinks(markdown, sourceFilePath) {
@@ -176,6 +225,28 @@ function firstDocumentRoute(directory) {
   }
 
   return null
+}
+
+function collectDirectoryRoutes(directory) {
+  const entries = sortEntries(
+    fs.readdirSync(directory, { withFileTypes: true }).filter(
+      (entry) => !ignoredDirectories.has(entry.name)
+    )
+  )
+
+  for (const entry of entries) {
+    if (!entry.isDirectory()) {
+      continue
+    }
+
+    const entryPath = path.join(directory, entry.name)
+    const routePath = firstDocumentRoute(entryPath)
+    if (routePath && !titleRouteMap.has(entry.name)) {
+      titleRouteMap.set(entry.name, routePath)
+    }
+
+    collectDirectoryRoutes(entryPath)
+  }
 }
 
 function buildItems(directory) {
@@ -231,13 +302,17 @@ function generateContent() {
 
   for (const [sourcePath, routePath] of routeMap.entries()) {
     const rawContent = fs.readFileSync(sourcePath, 'utf-8')
-    const rewrittenContent = rewriteMarkdownLinks(rawContent, sourcePath)
+    const rewrittenContent = rewriteWikiLinks(
+      rewriteMarkdownLinks(rawContent, sourcePath),
+      sourcePath
+    )
     writeContentPage(routePath, rewrittenContent)
   }
 }
 
 const topDirectories = topLevelEntries()
 collectMarkdownFiles(knowledgeRoot)
+collectDirectoryRoutes(knowledgeRoot)
 generateContent()
 
 const nav = topDirectories.map((entry) => ({
