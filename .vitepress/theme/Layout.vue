@@ -7,10 +7,13 @@ import nav from '../nav.json'
 const route = useRoute()
 const Layout = DefaultTheme.Layout
 
+function sectionCodeFromPath(path: string) {
+  return path.match(/(?:^|\/)(\d+)(?:\/|$)/)?.[1] ?? ''
+}
+
 const sectionTitleMap = new Map(
   nav.map((item) => {
-    const match = item.link.match(/^\/(\d+)\//)
-    return [match?.[1] ?? '', item.text]
+    return [sectionCodeFromPath(item.link), item.text]
   })
 )
 
@@ -21,12 +24,12 @@ const currentSectionTitle = computed(() => {
     return '技术知识库'
   }
 
-  const match = path.match(/^\/(\d+)\//)
-  if (!match) {
+  const sectionCode = sectionCodeFromPath(path)
+  if (!sectionCode) {
     return '技术知识库'
   }
 
-  return sectionTitleMap.get(match[1]) ?? '技术知识库'
+  return sectionTitleMap.get(sectionCode) ?? '技术知识库'
 })
 </script>
 

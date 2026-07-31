@@ -4,6 +4,8 @@ import path from 'node:path'
 const projectRoot = process.cwd()
 const knowledgeRoot = path.join(projectRoot, 'knowledge')
 const contentRoot = path.join(projectRoot, '.vitepress/.content')
+const publicSourceRoot = path.join(projectRoot, 'public')
+const publicContentRoot = path.join(contentRoot, 'public')
 const navOutputPath = path.join(projectRoot, '.vitepress/nav.json')
 const sidebarOutputPath = path.join(projectRoot, '.vitepress/sidebar.json')
 const ignoredDirectories = new Set([
@@ -222,6 +224,10 @@ function generateContent() {
   const homeSourcePath = path.join(projectRoot, 'index.md')
   const homeContent = fs.readFileSync(homeSourcePath, 'utf-8')
   fs.writeFileSync(path.join(contentRoot, 'index.md'), homeContent, 'utf-8')
+
+  if (fs.existsSync(publicSourceRoot)) {
+    fs.cpSync(publicSourceRoot, publicContentRoot, { recursive: true })
+  }
 
   for (const [sourcePath, routePath] of routeMap.entries()) {
     const rawContent = fs.readFileSync(sourcePath, 'utf-8')
