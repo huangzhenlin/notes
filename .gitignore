@@ -1,6 +1,7 @@
 # Local project settings
 .agents/
 .codex/
+knowledge/.obsidian/
 
 # Editor settings
 .vscode/
