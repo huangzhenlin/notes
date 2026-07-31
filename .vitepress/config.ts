@@ -8,7 +8,7 @@ const sidebar = fs.existsSync(sidebarPath)
   : []
 
 export default defineConfig({
-  srcDir: 'knowledge',
+  srcDir: '.',
   lang: 'zh-CN',
   title: '技术知识库',
   description: 'huangzhenlin/notes 技术知识库',
@@ -16,11 +16,14 @@ export default defineConfig({
   cleanUrls: true,
   lastUpdated: true,
   ignoreDeadLinks: true,
+  rewrites: {
+    'knowledge/:path*': ':path*'
+  },
   srcExclude: [
-    'AGENTS.md',
-    '**/.agents/**',
-    '**/.codex/**',
-    '**/.obsidian/**'
+    'knowledge/**/AGENTS.md',
+    'knowledge/**/.agents/**',
+    'knowledge/**/.codex/**',
+    'knowledge/**/.obsidian/**'
   ],
   themeConfig: {
     logo: undefined,
