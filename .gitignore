@@ -13,6 +13,7 @@ node_modules/
 .vitepress/dist/
 .vitepress/sidebar.json
 .vitepress/nav.json
+.vitepress/titles.json
 .vitepress/rewrites.json
 .vitepress/.content/
 

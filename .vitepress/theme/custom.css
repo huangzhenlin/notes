@@ -30,3 +30,19 @@
   margin: 1.25rem 0;
   overflow-x: auto;
 }
+
+.VPSidebarItem.collapsed.has-active > .items {
+  display: block;
+}
+
+.VPSidebarItem.collapsed.has-active > .item > .caret .caret-icon {
+  transform: rotate(90deg);
+}
+
+.VPFeatures {
+  margin-top: 1rem;
+}
+
+.vp-doc table a {
+  font-weight: 600;
+}
