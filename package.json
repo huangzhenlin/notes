@@ -1,0 +1,14 @@
+{
+  "name": "huangzhenlin-notes",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "docs:dev": "npm run build:sidebar && vitepress dev .",
+    "docs:build": "npm run build:sidebar && vitepress build .",
+    "docs:preview": "vitepress preview .",
+    "build:sidebar": "node scripts/build-sidebar.mjs"
+  },
+  "devDependencies": {
+    "vitepress": "^1.6.4"
+  }
+}

@@ -1,0 +1,21 @@
+# Local project settings
+.agents/
+.codex/
+
+# Editor settings
+.vscode/
+.idea/
+
+# Node.js dependencies and build output
+node_modules/
+.vitepress/cache/
+.vitepress/dist/
+.vitepress/sidebar.json
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.swp
+.DS_Store
+Thumbs.db

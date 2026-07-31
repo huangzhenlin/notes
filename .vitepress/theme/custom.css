@@ -1,0 +1,22 @@
+:root {
+  --vp-c-brand-1: #0f766e;
+  --vp-c-brand-2: #0d9488;
+  --vp-c-brand-3: #14b8a6;
+  --vp-c-brand-soft: rgb(20 184 166 / 14%);
+  --vp-font-family-base: "Noto Sans SC", "Microsoft YaHei", sans-serif;
+  --vp-font-family-mono: "Cascadia Code", "JetBrains Mono", monospace;
+}
+
+.dark {
+  --vp-c-bg: #10201f;
+  --vp-c-bg-soft: #172b29;
+  --vp-c-bg-alt: #0d1918;
+}
+
+.VPHero .name {
+  letter-spacing: -0.04em;
+}
+
+.VPHero .tagline {
+  max-width: 42rem;
+}
