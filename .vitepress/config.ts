@@ -12,7 +12,7 @@ const sidebar = fs.existsSync(sidebarPath)
   : []
 
 export default defineConfig({
-  srcDir: 'knowledge',
+  srcDir: '.vitepress/.content',
   lang: 'zh-CN',
   title: '技术知识库',
   description: 'huangzhenlin/notes 技术知识库',
@@ -29,11 +29,7 @@ export default defineConfig({
   themeConfig: {
     logo: undefined,
     siteTitle: false,
-    nav: [
-      { text: '首页', link: '/' },
-      ...nav,
-      { text: 'GitHub', link: 'https://github.com/huangzhenlin/notes' }
-    ],
+    nav,
     sidebar,
     outline: {
       level: [2, 4]

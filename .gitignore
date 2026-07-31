@@ -13,6 +13,7 @@ node_modules/
 .vitepress/sidebar.json
 .vitepress/nav.json
 .vitepress/rewrites.json
+.vitepress/.content/
 
 # Temporary files
 *.tmp
