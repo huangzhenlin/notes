@@ -17,6 +17,9 @@ export default defineConfig({
   title: '技术知识库',
   description: 'huangzhenlin/notes 技术知识库',
   base: '/notes/',
+  head: [
+    ['link', { rel: 'icon', type: 'image/svg+xml', href: '/notes/favicon.svg' }]
+  ],
   cleanUrls: true,
   lastUpdated: true,
   ignoreDeadLinks: true,
@@ -29,7 +32,10 @@ export default defineConfig({
   themeConfig: {
     logo: undefined,
     siteTitle: false,
-    nav,
+    nav: [
+      { text: '首页', link: '/' },
+      ...nav
+    ],
     sidebar,
     outline: {
       level: [2, 4]
