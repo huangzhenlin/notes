@@ -10,20 +10,16 @@ hero:
       text: 开始阅读
       link: /01/1.1/1.1.1/
     - theme: alt
-      text: 查看项目沉淀
-      link: /09/1.1/1.1.1/
+      text: GitHub 仓库
+      link: https://github.com/huangzhenlin/notes
 
 features:
   - title: 分层组织
     details: 按领域、主题和知识点拆分，便于持续积累和快速定位。
-  - title: Markdown 驱动
-    details: 保持本地编辑习惯，提交后自动构建为静态站点。
-  - title: 自动发布
-    details: 通过 GitHub Actions 自动部署到 GitHub Pages。
-  - title: 动态导航
-    details: 顶部栏目和侧边目录根据知识库目录自动生成，目录调整后无需手动改菜单。
-  - title: 纯编号路由
-    details: 文档地址使用稳定的编号路径，避免中文、空格带来的 URL 转义。
-  - title: 持续沉淀
-    details: 适合记录概念、机制、示例、边界和工程实践，逐步形成可复习的知识体系。
+  - title: 概念清晰
+    details: 从基础概念出发，逐步梳理原理、机制、边界和常见误区。
+  - title: 便于复习
+    details: 按照学习顺序组织知识点，适合查阅、回顾和持续补充。
+  - title: 内容沉淀
+    details: 记录技术实践、问题分析和项目经验，逐步形成完整的知识体系。
 ---
